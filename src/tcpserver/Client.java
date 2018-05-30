@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  *
  * @author axelb
  */
-public class Client {
+public class Client implements Runnable {
     public Client()
     {
         try {
@@ -36,7 +36,13 @@ public class Client {
         }
     }
     
-    public String getRequest(String filename)
+    @Override
+    public void run()
+    {
+        getRequest("index.txt");
+    }
+    
+    public void getRequest(String filename)
     {
         try {
             OutputStream out = socket.getOutputStream();
@@ -55,38 +61,42 @@ public class Client {
             }
             while(in.ready());
             
+            //System.out.println(response);
+            
             int contentTypeIndex = response.indexOf("Content-Type");
             String contentType = response.substring(contentTypeIndex, response.indexOf('\n', contentTypeIndex));
             contentType = contentType.split(":")[1];
             
+            String fileContent = response.substring(response.indexOf(System.lineSeparator() + System.lineSeparator()) + 4);
+            
+            File clientFolder = new File(getClass().getResource("client").toURI());
+            File file = new File(clientFolder, filename);
+            FileOutputStream outputFile = new FileOutputStream(file);
+            
             if(contentType.startsWith(" text"))
             {
-                return response;
+                outputFile.write(fileContent.getBytes());
             }
             else if(contentType.startsWith(" image"))
             {
-                File file = new File(filename);
-                String outputFilename = file.getParentFile().getParent() + "\\client" + filename.substring(filename.lastIndexOf("\\"));
-                String fileContent = response.substring(response.indexOf(System.lineSeparator() + System.lineSeparator()) + 4);
-                
-                try (FileOutputStream outputFile = new FileOutputStream(outputFilename)) {
-                    outputFile.write(Base64.getDecoder().decode(fileContent));
-                    outputFile.flush();
-                }
+                outputFile.write(Base64.getDecoder().decode(fileContent));
             }
+
+            outputFile.flush();
             
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        return null;
     }
     
-    public String putRequest(String filename)
+    public void putRequest(String filename)
     {
         
-        
-        return null;
+    }
+    
+    public static void main(String[] args)
+    {
+        (new Thread(new Client())).start();
     }
     
     private Socket socket;

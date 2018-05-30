@@ -37,123 +37,133 @@ public class Server implements Runnable {
 
     @Override
     public void run() {
-        try {
-            Socket connection = serverSocket.accept();
-            
-            OutputStream out = connection.getOutputStream();
-            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            
-            String request = "";
-            String data;
-            do
-            {
-                data = in.readLine();
-                request += data;
-            }
-            while(!data.equals(""));
-            
-            if(request.startsWith("GET"))
-            {
-                Date date = new Date();
-                String response = "HTTP/1.1 ";
-                String fileContent = "";
-                String filename = request.substring(4, request.length() - 9);
-                String fileExtension = filename.substring(filename.lastIndexOf('.') + 1);
-                
-                if(fileExtension.matches("(jpg|jpeg|png|gif|bmp)"))
-                {
-                    File file = new File(filename);
-                    try
-                    {
-                        FileInputStream fileStream = new FileInputStream(file);
-                        byte imageData[] = new byte[(int) file.length()];
-                        fileStream.read(imageData);
-                        
-                        fileContent = new String(Base64.getEncoder().encode(imageData));
-                    }
-                    catch(IOException ex)
-                    {
-                        response += "404 Not Found" + System.lineSeparator();
-                    }
-                }
-                else
-                {
-                    try(BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(filename)))
-                    {
-                        int c;
-                        do
-                        {
-                            c = fileStream.read();
-                            if(c != -1)
-                                fileContent += (char) c;
-                        }
-                        while(c != -1);
+        while(true)
+        {
+            try {
+                Socket connection = serverSocket.accept();
 
-                        response += "200 OK" + System.lineSeparator();
-                    }
-                    catch(IOException ex)
-                    {
-                        response += "404 Not Found" + System.lineSeparator();
-                    }
-                }
-                //Date lastModified = new Date();
-                
-                response += "Date: " + date + System.lineSeparator();
-                response += "Server: TP" + System.lineSeparator();
-                response += "Content-Length: " + fileContent.getBytes().length + System.lineSeparator();
-                //response += "Connection: close" + System.lineSeparator();
-                
-                switch(fileExtension)
-                {
-                    case "txt" :
-                        response += "Content-Type: text/plain" + System.lineSeparator();
-                        break;
-                    case "html" :
-                    case "htm" :
-                        response += "Content-Type: text/html" + System.lineSeparator();
-                        break;
-                    case "jpg" :
-                    case "jpeg" :
-                        response += "Content-Type: image/jpeg" + System.lineSeparator();
-                        break;
-                    case "png" :
-                        response += "Content-Type: image/png" + System.lineSeparator();
-                        break;
-                    case "gif" :
-                        response += "Content-Type: image/gif" + System.lineSeparator();
-                        break;
-                    case "bmp" :
-                        response += "Content-Type: image/bmp" + System.lineSeparator();
-                        break;
-                }
-                
-                response += System.lineSeparator();
-                response += fileContent;
-                
-                out.write(response.getBytes());
-                out.flush();
-            }
-            else if(request.startsWith("PUT"))
-            {
-                BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(request.substring(4, request.length() - 9)));
-                String fileContent = "";
-                int c;
+                OutputStream out = connection.getOutputStream();
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+
+                String request = "";
+                String data;
                 do
                 {
-                    c = fileStream.read();
-                    if(c != -1)
-                        fileContent += (char) c;
+                    data = in.readLine();
+                    request += data;
                 }
-                while(c != -1);
-                
-                fileContent += System.lineSeparator() + System.lineSeparator();
-                out.write(fileContent.getBytes());
-                out.flush();
+                while(!data.equals(""));
+
+                if(request.startsWith("GET"))
+                {
+                    Date date = new Date();
+                    String response = "HTTP/1.1 ";
+                    String fileContent = "";
+                    String filename = request.substring(4, request.length() - 9);
+                    String fileExtension = filename.substring(filename.lastIndexOf('.') + 1);
+
+                    if(fileExtension.matches("(jpg|jpeg|png|gif|bmp)"))
+                    {
+                        
+                        try
+                        {
+                            File file = new File(getClass().getResource("server/" + filename).toURI());
+                            BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(file));
+                            byte imageData[] = new byte[(int) file.length()];
+                            fileStream.read(imageData);
+
+                            fileContent = new String(Base64.getEncoder().encode(imageData));
+                            
+                            response += "200 OK" + System.lineSeparator();
+                        }
+                        catch(Exception ex)
+                        {
+                            response += "404 Not Found" + System.lineSeparator();
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            File file = new File(getClass().getResource("server/" + filename).toURI());
+                            BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(file));
+                            byte fileData[] = new byte[(int) file.length()];
+                            fileStream.read(fileData);
+                            
+                            fileContent = new String(fileData);
+
+                            response += "200 OK" + System.lineSeparator();
+                        }
+                        catch(Exception ex)
+                        {
+                            response += "404 Not Found" + System.lineSeparator();
+                        }
+                    }
+                    //Date lastModified = new Date();
+
+                    response += "Date: " + date + System.lineSeparator();
+                    response += "Server: TP" + System.lineSeparator();
+                    response += "Content-Length: " + fileContent.getBytes().length + System.lineSeparator();
+                    //response += "Connection: close" + System.lineSeparator();
+
+                    switch(fileExtension)
+                    {
+                        case "txt" :
+                            response += "Content-Type: text/plain" + System.lineSeparator();
+                            break;
+                        case "html" :
+                        case "htm" :
+                            response += "Content-Type: text/html" + System.lineSeparator();
+                            break;
+                        case "jpg" :
+                        case "jpeg" :
+                            response += "Content-Type: image/jpeg" + System.lineSeparator();
+                            break;
+                        case "png" :
+                            response += "Content-Type: image/png" + System.lineSeparator();
+                            break;
+                        case "gif" :
+                            response += "Content-Type: image/gif" + System.lineSeparator();
+                            break;
+                        case "bmp" :
+                            response += "Content-Type: image/bmp" + System.lineSeparator();
+                            break;
+                    }
+
+                    response += System.lineSeparator();
+                    response += fileContent;
+
+                    out.write(response.getBytes());
+                    out.flush();
+                }
+                else if(request.startsWith("PUT"))
+                {
+                    BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(request.substring(4, request.length() - 9)));
+                    String fileContent = "";
+                    int c;
+                    do
+                    {
+                        c = fileStream.read();
+                        if(c != -1)
+                            fileContent += (char) c;
+                    }
+                    while(c != -1);
+
+                    fileContent += System.lineSeparator() + System.lineSeparator();
+                    out.write(fileContent.getBytes());
+                    out.flush();
+                }
+            
+            } catch (IOException ex) {
+                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
             }
-        } catch (IOException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
-    ServerSocket serverSocket;
+    public static void main(String[] args)
+    {
+        (new Thread(new Server())).start();
+    }
+    
+    private ServerSocket serverSocket;
 }
