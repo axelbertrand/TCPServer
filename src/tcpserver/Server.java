@@ -10,12 +10,17 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Date;
 import java.util.logging.Level;
@@ -138,25 +143,98 @@ public class Server implements Runnable {
                 }
                 else if(request.startsWith("PUT"))
                 {
-                    BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(request.substring(4, request.length() - 9)));
-                    String fileContent = "";
-                    int c;
+                    String reponse="";
+                
+                    int indHttp = request.indexOf(" HTTP/1.");
+                    String http = request.substring(indHttp+1, indHttp+9);
+
+                    String cheminFichier = request.substring(4, indHttp);
+                    String nomFichier = cheminFichier.substring(cheminFichier.lastIndexOf("\\") + 1);
+                    reponse += http;
+                    
+                    String ext = nomFichier.substring(nomFichier.lastIndexOf(".") + 1);
+                    String type = "";
+                    
+                    String fichier = "";
+                    char c;
                     do
                     {
-                        c = fileStream.read();
-                        if(c != -1)
-                            fileContent += (char) c;
+                        c = (char) in.read();
+                        fichier += c;
                     }
-                    while(c != -1);
-
-                    fileContent += System.lineSeparator() + System.lineSeparator();
-                    out.write(fileContent.getBytes());
+                    while(in.ready());
+                    
+                    
+                    try{
+                        String path = "build\\classes\\tcpserver\\server\\" + nomFichier;
+                        FileInputStream f = new FileInputStream(path);
+                        byte[] contenu = Files.readAllBytes(Paths.get(path));
+                    
+                        String compare = "";
+                        if(ext.equals("txt")) {
+                            compare = new String(contenu);
+                            type = "text";
+                        }
+                        else {
+                            compare = new String(Base64.getEncoder().encode(contenu));
+                            type = "image";
+                        }
+                    
+                    
+                        if(fichier.equals(compare)) {
+                            reponse += " 204 No Content"+System.lineSeparator();
+                        }
+                        else{
+                            writeToFile(nomFichier,fichier,type);
+                            reponse += " 200 OK"+System.lineSeparator();
+                        }
+                    }		
+                    catch (FileNotFoundException e){
+                        if(ext.equals("txt")) {
+                            type = "text";
+                        }
+                        else {
+                            type = "image";
+                        }
+                        writeToFile(nomFichier, fichier, type);
+                        reponse = http+" 201 Created"+System.lineSeparator();
+                    }
+                     
+                    reponse += "Content-Location " + nomFichier + System.lineSeparator();
+                    reponse += System.lineSeparator() + System.lineSeparator();
+                    out.write(reponse.getBytes());
                     out.flush();
                 }
             
             } catch (IOException ex) {
                 Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
             }
+        }
+    }
+    
+    public void writeToFile(String nomFichier, String fichier, String type) {
+        
+        try {
+            File clientFolder = new File(getClass().getResource("server").toURI());
+            File file = new File(clientFolder, nomFichier);
+            FileOutputStream outputFile = new FileOutputStream(file);
+            
+            if(type.equals("text"))
+            {
+                outputFile.write(fichier.getBytes());
+            }
+            else 
+            {
+                outputFile.write(Base64.getDecoder().decode(fichier));
+            }
+
+            outputFile.flush();
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     

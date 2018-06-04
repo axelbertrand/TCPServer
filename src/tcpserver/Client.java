@@ -8,6 +8,7 @@ package tcpserver;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +40,7 @@ public class Client implements Runnable {
     @Override
     public void run()
     {
-        getRequest("index.txt");
+        putRequest("indexPut.txt");
     }
     
     public void getRequest(String filename)
@@ -91,7 +92,75 @@ public class Client implements Runnable {
     
     public void putRequest(String filename)
     {
-        
+        String fileContent;
+        try {
+            OutputStream out = socket.getOutputStream();
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            
+            File file = new File(getClass().getResource("client/" + filename).toURI());
+            BufferedInputStream fileStream = new BufferedInputStream(new FileInputStream(file));
+            byte data[] = new byte[(int) file.length()];
+            fileStream.read(data);
+
+            String fileExtension = filename.substring(filename.lastIndexOf('.') + 1);
+            if(fileExtension.matches("(jpg|jpeg|png|gif|bmp)")) {
+                fileContent = new String(Base64.getEncoder().encode(data));
+            }
+            else {
+                fileContent = new String(data);
+            }
+                        
+            String request = "PUT " + filename + " HTTP/1.1" + System.lineSeparator();
+            request += "Host: client" + System.lineSeparator();
+            
+            switch(fileExtension)
+            {
+                case "txt" :
+                    request += "Content-Type: text/plain" + System.lineSeparator();
+                    break;
+                case "html" :
+                case "htm" :
+                    request += "Content-Type: text/html" + System.lineSeparator();
+                    break;
+                case "jpg" :
+                case "jpeg" :
+                    request += "Content-Type: image/jpeg" + System.lineSeparator();
+                    break;
+                case "png" :
+                    request += "Content-Type: image/png" + System.lineSeparator();
+                    break;
+                case "gif" :
+                    request += "Content-Type: image/gif" + System.lineSeparator();
+                    break;
+                case "bmp" :
+                    request += "Content-Type: image/bmp" + System.lineSeparator();
+                    break;
+            }
+            
+            request += "Content-Length: " + fileContent.getBytes().length + System.lineSeparator();
+            
+            request += System.lineSeparator();
+            request += fileContent;
+                        
+            out.write(request.getBytes());
+            out.flush();
+            
+            
+            String response = "";
+            char rep;
+            do
+            {
+                rep = (char) in.read();
+                response += rep;
+            }
+            while(in.ready());
+            
+            System.out.println(response);
+            
+            
+            } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     public static void main(String[] args)
