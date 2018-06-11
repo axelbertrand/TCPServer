@@ -11,13 +11,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Base64;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,7 +29,9 @@ public class Client implements Runnable {
     public Client()
     {
         try {
+            System.out.println("Ouverture de connexion");
             socket = new Socket(InetAddress.getByName("127.0.0.1"), 1500);
+            System.out.println("Connexion etablie");
         } catch (UnknownHostException ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -40,7 +42,24 @@ public class Client implements Runnable {
     @Override
     public void run()
     {
-        putRequest("indexPut.txt");
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Choisissez le nom du fichier :");
+        String filename = scanner.next();
+        System.out.println("Choisissez le type de requête (GET/PUT) :");
+        String requestMode = scanner.next();
+        
+        switch(requestMode)
+        {
+            case "GET" :
+            case "get" :
+                getRequest(filename);
+                break;
+            case "PUT" :
+            case "put" :
+                putRequest(filename);
+            default :
+                System.out.println("Ce type de requête n'est pas reconnu");
+        }
     }
     
     public void getRequest(String filename)
@@ -52,6 +71,7 @@ public class Client implements Runnable {
             String request = "GET " + filename + " HTTP/1.1" + System.lineSeparator() + System.lineSeparator();
             out.write(request.getBytes());
             out.flush();
+            System.out.println("Requête GET envoyée au serveur");
             
             String response = "";
             char data;
@@ -62,9 +82,13 @@ public class Client implements Runnable {
             }
             while(in.ready());
             
-            //System.out.println(response);
+            System.out.println("Réponse du serveur : ");
+            System.out.println(response);
             
             int contentTypeIndex = response.indexOf("Content-Type");
+            if(contentTypeIndex < 0)
+                return;
+            
             String contentType = response.substring(contentTypeIndex, response.indexOf('\n', contentTypeIndex));
             contentType = contentType.split(":")[1];
             
@@ -84,7 +108,7 @@ public class Client implements Runnable {
             }
 
             outputFile.flush();
-            
+
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -144,7 +168,7 @@ public class Client implements Runnable {
                         
             out.write(request.getBytes());
             out.flush();
-            
+            System.out.println("Requête PUT envoyée au serveur");
             
             String response = "";
             char rep;
@@ -155,8 +179,8 @@ public class Client implements Runnable {
             }
             while(in.ready());
             
+            System.out.println("Réponse du serveur : ");
             System.out.println(response);
-            
             
             } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);

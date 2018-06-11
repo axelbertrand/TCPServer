@@ -7,13 +7,11 @@ package tcpserver;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
@@ -35,6 +33,7 @@ public class Server implements Runnable {
     {
         try {
             serverSocket = new ServerSocket(1500);
+            System.out.println("Serveur ouvert");
         } catch (IOException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -45,11 +44,14 @@ public class Server implements Runnable {
         while(true)
         {
             try {
-                Socket connection = serverSocket.accept();
+                System.out.println("En attente d'un client...");
+                Socket connection = serverSocket.accept();                
+                System.out.println("Connexion établie ");
 
                 OutputStream out = connection.getOutputStream();
                 BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
+                System.out.println("Lecture de la requête...");
                 String request = "";
                 String data;
                 do
@@ -59,6 +61,9 @@ public class Server implements Runnable {
                 }
                 while(!data.equals(""));
 
+                System.out.println("Requête du client : ");
+                System.out.println(request);
+                System.out.println("Constitution de la réponse...");
                 if(request.startsWith("GET"))
                 {
                     Date date = new Date();
@@ -69,7 +74,6 @@ public class Server implements Runnable {
 
                     if(fileExtension.matches("(jpg|jpeg|png|gif|bmp)"))
                     {
-                        
                         try
                         {
                             File file = new File(getClass().getResource("server/" + filename).toURI());
@@ -143,7 +147,7 @@ public class Server implements Runnable {
                 }
                 else if(request.startsWith("PUT"))
                 {
-                    String reponse="";
+                    String reponse = "";
                 
                     int indHttp = request.indexOf(" HTTP/1.");
                     String http = request.substring(indHttp+1, indHttp+9);
@@ -182,11 +186,11 @@ public class Server implements Runnable {
                     
                     
                         if(fichier.equals(compare)) {
-                            reponse += " 204 No Content"+System.lineSeparator();
+                            reponse += " 204 No Content" + System.lineSeparator();
                         }
                         else{
                             writeToFile(nomFichier,fichier,type);
-                            reponse += " 200 OK"+System.lineSeparator();
+                            reponse += " 200 OK" + System.lineSeparator();
                         }
                     }		
                     catch (FileNotFoundException e){
@@ -197,18 +201,20 @@ public class Server implements Runnable {
                             type = "image";
                         }
                         writeToFile(nomFichier, fichier, type);
-                        reponse = http+" 201 Created"+System.lineSeparator();
+                        reponse = http + " 201 Created" + System.lineSeparator();
                     }
                      
-                    reponse += "Content-Location " + nomFichier + System.lineSeparator();
+                    reponse += "Content-Location: " + nomFichier + System.lineSeparator();
                     reponse += System.lineSeparator() + System.lineSeparator();
                     out.write(reponse.getBytes());
                     out.flush();
                 }
+                System.out.println("Réponse envoyée au client");
             
             } catch (IOException ex) {
                 Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
             }
+            System.out.println("Fin de la connexion");
         }
     }
     
@@ -229,11 +235,7 @@ public class Server implements Runnable {
             }
 
             outputFile.flush();
-        } catch (URISyntaxException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
+        } catch (URISyntaxException | IOException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
